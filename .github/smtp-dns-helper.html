@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>SMTP / DNS Helper — כלי הגדרת מיילים</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', 'David', Arial, sans-serif;
+        background: #f4f6fb;
+        color: #1a2233;
+        margin: 0;
+        padding: 24px;
+        max-width: 1050px;
+        margin-inline: auto;
+    }
+    h1 {
+        color: #1F3864;
+        border-bottom: 3px solid #1F3864;
+        padding-bottom: 8px;
+        margin-bottom: 6px;
+    }
+    .sub {
+        color: #55617a;
+        margin-bottom: 24px;
+    }
+    .card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        padding: 20px 22px;
+        margin-bottom: 20px;
+    }
+    label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 6px;
+    }
+    input[type=text] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ccd3e0;
+        border-radius: 6px;
+        font-size: 15px;
+        direction: ltr;
+        text-align: left;
+    }
+    button {
+        background: #1F3864;
+        color: #fff;
+        border: 0;
+        padding: 10px 22px;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+    button:hover { background: #2E5AA0; }
+    button:disabled { background: #98a3bd; cursor: not-allowed; }
+    button.small { padding: 4px 12px; font-size: 13px; }
+    button.copy,
+    a.link-btn {
+        display: inline-block;
+        background: #2E74B5;
+        color: #fff;
+        border: 0;
+        padding: 4px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.5;
+        font-family: inherit;
+        border-radius: 6px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background .15s;
+        box-sizing: border-box;
+        vertical-align: middle;
+    }
+    button.copy:hover,
+    a.link-btn:hover { background: #1F5A94; }
+    button.copy.ok { background: #2E8B57; }
+
+    .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 200px; }
+
+    .result {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 8px;
+        border-right: 4px solid #ccd3e0;
+        background: #f8fafd;
+    }
+    .result.google { border-right-color: #EA4335; background: #fff5f4; }
+    .result.m365   { border-right-color: #0078D4; background: #f0f7fd; }
+    .result.ses    { border-right-color: #FF9900; background: #fff8ec; }
+    .result.other  { border-right-color: #6b7280; background: #f4f5f7; }
+    .result.error  { border-right-color: #D64545; background: #fdf1f1; }
+
+    .badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-inline-start: 6px;
+    }
+    .badge.google { background: #EA4335; color: #fff; }
+    .badge.m365   { background: #0078D4; color: #fff; }
+    .badge.ses    { background: #FF9900; color: #fff; }
+    .badge.other  { background: #6b7280; color: #fff; }
+
+    .tabs {
+        display: flex;
+        gap: 6px;
+        margin-top: 20px;
+        border-bottom: 2px solid #e0e5ee;
+    }
+    .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-bottom: 0;
+        border-radius: 8px 8px 0 0;
+        background: #eef1f7;
+        color: #55617a;
+        font-weight: 600;
+        margin-bottom: -2px;
+    }
+    .tab.active {
+        background: #fff;
+        border-color: #e0e5ee;
+        color: #1F3864;
+    }
+    .tab-content { display: none; padding-top: 18px; }
+    .tab-content.active { display: block; }
+
+    .record {
+        background: #f2f4f8;
+        border: 1px solid #dde2ec;
+        border-radius: 6px;
+        padding: 10px 12px;
+        margin: 8px 0;
+        font-family: Consolas, 'Courier New', monospace;
+        font-size: 13px;
+        direction: ltr;
+        text-align: left;
+        white-space: pre-wrap;
+        word-break: break-all;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    .record .val { flex: 1; }
+    .record-label {
+        font-weight: 700;
+        margin-top: 12px;
+        color: #1F3864;
+    }
+    .record-meta {
+        color: #55617a;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    .grid-3 {
+        display: grid;
+        grid-template-columns: 100px 1fr 1fr;
+        gap: 6px;
+        margin: 8px 0;
+        font-size: 13px;
+    }
+    .grid-3 > div {
+        padding: 6px 10px;
+        background: #f2f4f8;
+        border: 1px solid #dde2ec;
+        border-radius: 4px;
+        direction: ltr;
+        text-align: left;
+        font-family: Consolas, monospace;
+        overflow-wrap: anywhere;
+    }
+    .grid-3 .h {
+        font-weight: 700;
+        background: #1F3864;
+        color: #fff;
+        border-color: #1F3864;
+        font-family: 'Segoe UI', sans-serif;
+        direction: rtl;
+        text-align: right;
+    }
+
+    .note {
+        background: #fff8dc;
+        border-right: 4px solid #EAB308;
+        padding: 10px 14px;
+        border-radius: 6px;
+        margin: 12px 0;
+        font-size: 14px;
+    }
+    .warn {
+        background: #fdf1f1;
+        border-right: 4px solid #D64545;
+        padding: 10px 14px;
+        border-radius: 6px;
+        margin: 12px 0;
+        font-size: 14px;
+    }
+    h2 { color: #1F3864; margin-top: 4px; }
+    h3 { color: #2E74B5; margin-bottom: 6px; }
+    a { color: #2E74B5; }
+    .mx-list {
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        direction: ltr;
+        text-align: left;
+        margin-top: 6px;
+        color: #55617a;
+    }
+    .inner-card {
+        background: #f8fafd;
+        border: 1px solid #e0e5ee;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 14px;
+    }
+    .inner-card:last-child { margin-bottom: 0; }
+    .inner-card h3 {
+        margin: 0 0 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .inner-card h4 {
+        color: #2E74B5;
+        margin: 18px 0 8px 0;
+        font-size: 15px;
+    }
+    .inner-card h4:first-of-type { margin-top: 6px; }
+    .inner-card .note:first-child,
+    .inner-card .warn:first-child { margin-top: 0; }
+    .inner-card.config { background: #fffdf5; border-color: #f0e6c2; }
+    .inner-card.email  { background: #f4fbf6; border-color: #cfe6d5; }
+    .inner-card.email h3 { color: #2E8B57; }
+
+    .ses-mode-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+        padding: 4px;
+        background: #f4f6fb;
+        border-radius: 8px;
+        border: 1px solid #e0e5ee;
+    }
+    .ses-mode-tab {
+        flex: 1;
+        text-align: center;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all .15s;
+        font-weight: 600;
+        color: #55617a;
+    }
+    .ses-mode-tab.active {
+        background: #FF9900;
+        color: #fff;
+    }
+    .ses-mode-tab:hover:not(.active) {
+        background: #e0e5ee;
+    }
+
+    .smtp-grid {
+        display: grid;
+        grid-template-columns: 170px 1fr auto;
+        gap: 6px 10px;
+        align-items: center;
+        margin: 6px 0;
+    }
+    .smtp-grid > .k {
+        padding: 8px 12px;
+        background: #1F3864;
+        color: #fff;
+        border-radius: 4px;
+        font-weight: 600;
+        direction: rtl;
+        text-align: right;
+        font-size: 13px;
+        font-family: 'Segoe UI', 'David', Arial, sans-serif;
+    }
+    .smtp-grid > .v {
+        padding: 8px 12px;
+        background: #f2f4f8;
+        border: 1px solid #dde2ec;
+        border-radius: 4px;
+        font-family: Consolas, monospace;
+        font-size: 13px;
+        direction: ltr;
+        text-align: left;
+        overflow-wrap: anywhere;
+    }
+    .smtp-grid > .v.info {
+        font-family: 'Segoe UI', 'David', Arial, sans-serif;
+        direction: rtl;
+        text-align: right;
+        color: #55617a;
+    }
+
+    /* Collapsible cards */
+    .inner-card > h3 {
+        cursor: pointer;
+        user-select: none;
+    }
+    .inner-card > h3::before {
+        content: "▾";
+        font-size: 12px;
+        color: #55617a;
+        transition: transform .15s;
+        display: inline-block;
+        width: 12px;
+    }
+    .inner-card.collapsed > h3 { margin-bottom: 0; }
+    .inner-card.collapsed > h3::before { transform: rotate(90deg); }
+    .inner-card.collapsed > *:not(h3) { display: none !important; }
+    .email-body {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ccd3e0;
+        border-radius: 6px;
+        font-family: 'Segoe UI', 'David', Arial, sans-serif;
+        font-size: 14px;
+        direction: rtl;
+        text-align: right;
+        line-height: 1.6;
+        resize: vertical;
+    }
+    .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #ccd3e0;
+        border-top-color: #1F3864;
+        border-radius: 50%;
+        animation: spin .8s linear infinite;
+        margin-inline-start: 8px;
+        vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<h1>כלי הגדרת SMTP ורשומות DNS</h1>
+<div class="sub">
+    הזן דומיין לבדיקה — הכלי יזהה אם השירות של הלקוח הוא Google או Microsoft 365, ויציג את רשומות ה-DNS
+    (SPF / DKIM / DMARC) שצריך להוסיף לפי הספק הנבחר.
+</div>
+
+<!-- ============= Detection ============= -->
+<div class="card">
+    <label for="domain">דומיין הלקוח</label>
+    <div class="row">
+        <div>
+            <input type="text" id="domain" placeholder="example.com" autocomplete="off" spellcheck="false">
+        </div>
+        <button id="checkBtn" onclick="detectProvider()">בדוק דומיין</button>
+    </div>
+    <div id="result"></div>
+</div>
+
+<!-- ============= Tabs ============= -->
+<div class="card">
+    <h2>רשומות DNS לפי ספק</h2>
+    <div class="tabs">
+        <div class="tab active" data-tab="google" onclick="switchTab('google')">Google / Workspace</div>
+        <div class="tab" data-tab="m365"       onclick="switchTab('m365')">Microsoft 365</div>
+        <div class="tab" data-tab="ses"        onclick="switchTab('ses')">Amazon SES</div>
+    </div>
+
+    <!-- ---------- Google ---------- -->
+    <div class="tab-content active" id="tab-google">
+        <div class="inner-card">
+            <h3>הגדרות SMTP</h3>
+            <div class="smtp-grid">
+                <div class="k">SMTP Server</div>
+                <div class="v">smtp.gmail.com</div>
+                <button class="copy" onclick="copyText('smtp.gmail.com', this)">העתק</button>
+
+                <div class="k">Port</div>
+                <div class="v">587 (STARTTLS) &nbsp; | &nbsp; 465 (SSL/TLS)</div>
+                <span></span>
+
+                <div class="k">Username</div>
+                <div class="v">your-email@gmail.com  (כתובת המייל המלאה)</div>
+                <span></span>
+
+                <div class="k">Password</div>
+                <div class="v info">App Password (16 תווים) — יש לייצר בקונסולת Google עם 2FA מופעל.</div>
+                <a class="link-btn" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">יצירה</a>
+
+                <div class="k">Authentication</div>
+                <div class="v info">Required</div>
+                <span></span>
+
+                <div class="k">Encryption</div>
+                <div class="v info">STARTTLS על פורט 587, SSL על פורט 465</div>
+                <span></span>
+
+                <div class="k">מגבלה יומית</div>
+                <div class="v info">500 הודעות ב-Gmail רגיל, 2,000 ב-Google Workspace</div>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="inner-card">
+            <h3>רשומות DNS להוספה</h3>
+
+            <h4>1. SPF</h4>
+            <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: @ &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="record">
+                <span class="val" id="google-spf">v=spf1 include:_spf.google.com ~all</span>
+                <button class="copy" onclick="copyRecord('google-spf', this)">העתק</button>
+            </div>
+
+            <h4>2. DKIM</h4>
+            <div class="note">
+                את מפתח ה-DKIM חייבים לייצר בקונסולה של Google — הוא ייחודי לכל דומיין.
+                <br><br>
+                <strong>איך מייצרים:</strong><br>
+                Admin Console (admin.google.com) ⇐ Apps ⇐ Google Workspace ⇐ Gmail ⇐ Authenticate email ⇐ בחר דומיין ⇐ Generate new record ⇐ 2048-bit ⇐ העתק את ה-TXT.
+            </div>
+            <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: <code>google._domainkey</code> &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="record">
+                <span class="val">v=DKIM1; k=rsa; p=&lt;public key מה-Console של Google&gt;</span>
+            </div>
+            <div class="note">
+                לאחר הוספת הרשומה, יש לחזור ל-Admin Console וללחוץ <strong>Start authentication</strong>.
+            </div>
+
+            <h4>3. DMARC (מומלץ)</h4>
+            <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: <code>_dmarc</code> &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="record">
+                <span class="val" id="google-dmarc">v=DMARC1; p=quarantine; rua=mailto:dmarc@DOMAIN; adkim=s; aspf=s</span>
+                <button class="copy" onclick="copyRecord('google-dmarc', this)">העתק</button>
+            </div>
+        </div>
+
+        <div class="inner-card email">
+            <h3>מייל מוכן לשליחה למנהל ה-IT של הלקוח</h3>
+            <textarea id="emailBody-google" rows="12" class="email-body"></textarea>
+            <div style="margin-top:10px">
+                <button onclick="copyText(document.getElementById('emailBody-google').value, this)">העתק את המייל</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---------- M365 ---------- -->
+    <div class="tab-content" id="tab-m365">
+        <div class="inner-card config">
+            <div class="note">
+                לצורך ייצור רשומות ה-DKIM של M365, יש לספק את שם ה-<strong>Onmicrosoft Tenant</strong> של הלקוח
+                (למשל: <code>contoso</code> — מגיע מ-<code>contoso.onmicrosoft.com</code>).
+            </div>
+            <div class="row">
+                <div>
+                    <label for="tenant">Onmicrosoft Tenant name</label>
+                    <input type="text" id="tenant" placeholder="contoso" oninput="renderM365()">
+                </div>
+                <div>
+                    <label for="m365domain">Sending domain</label>
+                    <input type="text" id="m365domain" placeholder="contoso.com" oninput="renderM365()">
+                </div>
+            </div>
+        </div>
+
+        <div class="inner-card">
+            <h3>הגדרות SMTP</h3>
+            <div class="smtp-grid">
+                <div class="k">SMTP Server</div>
+                <div class="v">smtp.office365.com</div>
+                <button class="copy" onclick="copyText('smtp.office365.com', this)">העתק</button>
+
+                <div class="k">Port</div>
+                <div class="v">587</div>
+                <button class="copy" onclick="copyText('587', this)">העתק</button>
+
+                <div class="k">Username</div>
+                <div class="v" id="m365-smtp-user">user@DOMAIN</div>
+                <button class="copy" onclick="copyRecord('m365-smtp-user', this)">העתק</button>
+
+                <div class="k">Password</div>
+                <div class="v info">סיסמת המשתמש (או App Password כאשר יש MFA).</div>
+                <a class="link-btn" href="https://mysignins.microsoft.com/security-info" target="_blank" rel="noopener">יצירה</a>
+
+                <div class="k">Authentication</div>
+                <div class="v info">Required — יש להפעיל SMTP AUTH לתיבה מ-Admin Center.</div>
+                <span></span>
+
+                <div class="k">Encryption</div>
+                <div class="v info">STARTTLS</div>
+                <span></span>
+
+                <div class="k">מגבלה יומית</div>
+                <div class="v info">10,000 נמענים ליום, עד 30 הודעות בדקה</div>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="inner-card">
+            <h3>רשומות DNS להוספה</h3>
+
+            <h4>1. SPF</h4>
+            <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: @ &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="record">
+                <span class="val" id="m365-spf">v=spf1 include:spf.protection.outlook.com -all</span>
+                <button class="copy" onclick="copyRecord('m365-spf', this)">העתק</button>
+            </div>
+
+            <h4>2. DKIM (שני CNAMEs)</h4>
+            <div class="record-meta">Type: CNAME &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="grid-3">
+                <div class="h">Host</div>
+                <div class="h">Points to</div>
+                <div class="h">פעולה</div>
+
+                <div>selector1._domainkey</div>
+                <div id="m365-dkim1">selector1-DOMAIN-KEY._domainkey.TENANT.onmicrosoft.com</div>
+                <div><button class="copy" onclick="copyRecord('m365-dkim1', this)">העתק</button></div>
+
+                <div>selector2._domainkey</div>
+                <div id="m365-dkim2">selector2-DOMAIN-KEY._domainkey.TENANT.onmicrosoft.com</div>
+                <div><button class="copy" onclick="copyRecord('m365-dkim2', this)">העתק</button></div>
+            </div>
+            <div class="note">
+                לאחר הוספת ה-CNAMEs, יש להיכנס ל-Microsoft Defender ⇐ Email &amp; collaboration ⇐ Policies &amp; rules ⇐ Threat policies ⇐ DKIM,
+                לבחור בדומיין וללחוץ <strong>Enable</strong>. לוקח עד שעה עד שההפעלה עוברת.
+            </div>
+
+            <h4>3. DMARC (מומלץ)</h4>
+            <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: <code>_dmarc</code> &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="record">
+                <span class="val" id="m365-dmarc">v=DMARC1; p=quarantine; rua=mailto:dmarc@DOMAIN; adkim=s; aspf=s</span>
+                <button class="copy" onclick="copyRecord('m365-dmarc', this)">העתק</button>
+            </div>
+
+            <h4>4. Autodiscover (רק אם ה-DNS לא כבר מפנה)</h4>
+            <div class="record-meta">Type: CNAME &nbsp;|&nbsp; Host: <code>autodiscover</code> &nbsp;|&nbsp; TTL: 3600</div>
+            <div class="record">
+                <span class="val">autodiscover.outlook.com</span>
+                <button class="copy" onclick="copyText('autodiscover.outlook.com', this)">העתק</button>
+            </div>
+        </div>
+
+        <div class="inner-card email">
+            <h3>מייל מוכן לשליחה למנהל ה-IT של הלקוח</h3>
+            <textarea id="emailBody-m365" rows="12" class="email-body"></textarea>
+            <div style="margin-top:10px">
+                <button onclick="copyText(document.getElementById('emailBody-m365').value, this)">העתק את המייל</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---------- SES ---------- -->
+    <div class="tab-content" id="tab-ses">
+        <div class="ses-mode-tabs">
+            <div class="ses-mode-tab active" data-mode="user" onclick="switchSESMode('user')">יוזר בודד</div>
+            <div class="ses-mode-tab" data-mode="domain" onclick="switchSESMode('domain')">דומיין מאושר</div>
+        </div>
+
+        <!-- ===== יוזר בודד ===== -->
+        <div id="ses-mode-user">
+            <div class="inner-card config">
+                <div class="note">
+                    במצב "יוזר בודד" מאמתים אצל Amazon SES כתובת מייל בודדת. אין צורך בגישה ל-DNS —
+                    המשתמש עצמו יאשר את הכתובת דרך לינק שיישלח אליו.
+                </div>
+                <div class="row">
+                    <div>
+                        <label for="sesUserEmail">כתובת המייל של המשתמש לאישור</label>
+                        <input type="text" id="sesUserEmail" placeholder="user@customer.com" oninput="renderEmail()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="inner-card">
+                <h3>תהליך האימות והמסירה ללקוח</h3>
+                <div class="note">
+                    <strong>1. רישום הכתובת ב-SES</strong><br>
+                    אנחנו רושמים את כתובת המייל ב-SES Console (Verified identities → Create identity → Email address).<br><br>
+
+                    <strong>2. הלקוח מקבל מייל אימות</strong><br>
+                    Amazon Web Services שולח אוטומטית הודעה לכתובת שרשמנו, בכותרת:<br>
+                    <code>Amazon Web Services – Email Address Verification Request</code><br>
+                    הלקוח צריך ללחוץ על הלינק "Verify this email address" בתוך <strong>24 שעות</strong>.
+                    לאחר הלחיצה מופיע דף אישור באנגלית — זה מסיים את התהליך מבחינתו.<br><br>
+
+                    <strong>3. יצירת SMTP Credentials</strong><br>
+                    אנחנו יוצרים SMTP Username + Password ב-SES Console
+                    (SMTP settings → Create SMTP credentials).
+                    AWS מחזיר קובץ <strong>CSV</strong> עם שני הערכים —
+                    הקובץ מוצג <em>פעם אחת בלבד</em> ואי אפשר לשחזר אותו אחר כך.<br><br>
+
+                    <strong>4. מסירה ללקוח</strong><br>
+                    שולחים ללקוח את שם המשתמש והסיסמה מהקובץ, יחד עם הגדרות ה-SMTP למטה.
+                </div>
+            </div>
+
+            <div class="inner-card">
+                <h3>הגדרות SMTP</h3>
+                <div class="smtp-grid">
+                    <div class="k">SMTP Server</div>
+                    <div class="v">email-smtp.us-east-1.amazonaws.com</div>
+                    <button class="copy" onclick="copyText('email-smtp.us-east-1.amazonaws.com', this)">העתק</button>
+
+                    <div class="k">Port</div>
+                    <div class="v">587 (STARTTLS)</div>
+                    <button class="copy" onclick="copyText('587', this)">העתק</button>
+
+                    <div class="k">Username</div>
+                    <div class="v info">SMTP Username מקובץ ה-CSV שהתקבל ב-SES Console.</div>
+                    <span></span>
+
+                    <div class="k">Password</div>
+                    <div class="v info">SMTP Password מקובץ ה-CSV שהתקבל ב-SES Console.</div>
+                    <a class="link-btn" href="https://console.aws.amazon.com/ses/home#/smtp" target="_blank" rel="noopener">יצירה</a>
+
+                    <div class="k">Authentication</div>
+                    <div class="v info">Required</div>
+                    <span></span>
+
+                    <div class="k">Encryption</div>
+                    <div class="v info">STARTTLS</div>
+                    <span></span>
+                </div>
+            </div>
+
+            <div class="inner-card email">
+                <h3>מייל מוכן לשליחה ללקוח</h3>
+                <textarea id="emailBody-ses-user" rows="12" class="email-body"></textarea>
+                <div style="margin-top:10px">
+                    <button onclick="copyText(document.getElementById('emailBody-ses-user').value, this)">העתק את המייל</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== דומיין מאושר ===== -->
+        <div id="ses-mode-domain" style="display:none">
+            <div class="inner-card config">
+                <div class="note">
+                    במצב "דומיין מאושר" מאמתים דומיין שלם ב-SES ומגדירים DKIM ברמת DNS. כל כתובת מייל בדומיין יכולה לשלוח.
+                </div>
+                <div class="row">
+                    <div>
+                        <label for="sesdomain">Sending domain</label>
+                        <input type="text" id="sesdomain" placeholder="contoso.com" oninput="renderSES()">
+                    </div>
+                    <div>
+                        <label>SES DKIM Tokens (מה-Console — 3 ערכים, מופרדים בפסיק/רווח)</label>
+                        <input type="text" id="sesTokens" placeholder="abc123..., def456..., ghi789..." oninput="renderSES()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="inner-card">
+                <h3>הגדרות SMTP</h3>
+                <div class="smtp-grid">
+                    <div class="k">SMTP Server</div>
+                    <div class="v">email-smtp.us-east-1.amazonaws.com</div>
+                    <button class="copy" onclick="copyText('email-smtp.us-east-1.amazonaws.com', this)">העתק</button>
+
+                    <div class="k">Port</div>
+                    <div class="v">587 (STARTTLS) &nbsp; | &nbsp; 465 או 2587 (TLS Wrapper)</div>
+                    <span></span>
+
+                    <div class="k">Username</div>
+                    <div class="v info">SMTP Username שנוצר ב-SES Console → SMTP settings → Create SMTP credentials.</div>
+                    <span></span>
+
+                    <div class="k">Password</div>
+                    <div class="v info">SMTP Password שנוצר בעת יצירת ה-Credentials (מוצג פעם אחת — יש להוריד CSV).</div>
+                    <a class="link-btn" href="https://console.aws.amazon.com/ses/home#/smtp" target="_blank" rel="noopener">יצירה</a>
+
+                    <div class="k">Authentication</div>
+                    <div class="v info">Required</div>
+                    <span></span>
+
+                    <div class="k">Encryption</div>
+                    <div class="v info">STARTTLS</div>
+                    <span></span>
+
+                    <div class="k">מגבלה יומית</div>
+                    <div class="v info">ללא הגבלה לאחר יציאה מ-Sandbox. עלות: $0.10 לכל 1,000 הודעות.</div>
+                    <span></span>
+                </div>
+            </div>
+
+            <div class="inner-card">
+                <h3>רשומות DNS להוספה</h3>
+
+                <h4>1. SPF</h4>
+                <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: @ &nbsp;|&nbsp; TTL: 3600</div>
+                <div class="record">
+                    <span class="val" id="ses-spf">v=spf1 include:amazonses.com ~all</span>
+                    <button class="copy" onclick="copyRecord('ses-spf', this)">העתק</button>
+                </div>
+
+                <h4>2. DKIM (שלושה CNAMEs)</h4>
+                <div class="record-meta">Type: CNAME &nbsp;|&nbsp; TTL: 1800</div>
+                <div class="grid-3" id="ses-dkim-grid">
+                    <div class="h">Host</div>
+                    <div class="h">Points to</div>
+                    <div class="h">פעולה</div>
+                </div>
+
+                <h4>3. Custom MAIL FROM (מומלץ ל-alignment של SPF)</h4>
+                <div class="record-meta">
+                    נדרש כדי ש-SPF ישתמש בדומיין שלך במקום ב-amazonses.com — משפר deliverability.
+                </div>
+                <div class="grid-3">
+                    <div class="h">רשומה</div>
+                    <div class="h">Type / Host</div>
+                    <div class="h">Value</div>
+
+                    <div>MX</div>
+                    <div id="ses-mailfrom-mx-host">mail.DOMAIN</div>
+                    <div id="ses-mailfrom-mx-val">10 feedback-smtp.us-east-1.amazonses.com</div>
+
+                    <div>SPF</div>
+                    <div id="ses-mailfrom-spf-host">mail.DOMAIN (TXT)</div>
+                    <div>v=spf1 include:amazonses.com ~all</div>
+                </div>
+
+                <h4>4. DMARC (מומלץ)</h4>
+                <div class="record-meta">Type: TXT &nbsp;|&nbsp; Host: <code>_dmarc</code> &nbsp;|&nbsp; TTL: 3600</div>
+                <div class="record">
+                    <span class="val" id="ses-dmarc">v=DMARC1; p=quarantine; rua=mailto:dmarc@DOMAIN; adkim=r; aspf=r</span>
+                    <button class="copy" onclick="copyRecord('ses-dmarc', this)">העתק</button>
+                </div>
+            </div>
+
+            <div class="inner-card email">
+                <h3>מייל מוכן לשליחה למנהל ה-IT של הלקוח</h3>
+                <textarea id="emailBody-ses" rows="12" class="email-body"></textarea>
+                <div style="margin-top:10px">
+                    <button onclick="copyText(document.getElementById('emailBody-ses').value, this)">העתק את המייל</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>עצות מהירות</h2>
+    <ul>
+        <li>לכל דומיין מותרת רק רשומת SPF <em>אחת</em>. אם קיימת רשומה, יש לשלב את ה-include בתוכה במקום להוסיף חדשה.</li>
+        <li>SPF מוגבל ל-10 lookups. כל <code>include:</code>, <code>a</code>, <code>mx</code> נחשבים כ-lookup.</li>
+        <li>שינויים ב-DNS נכנסים לתוקף לפי ה-TTL של הרשומה הקודמת (עד 24-48 שעות, בפועל דקות בודדות).</li>
+        <li>לבדיקה מהירה: <a href="https://mxtoolbox.com" target="_blank">mxtoolbox.com</a> או <a href="https://www.mail-tester.com" target="_blank">mail-tester.com</a>.</li>
+    </ul>
+</div>
+
+<script>
+// ---------------- DNS via DoH (Google) ----------------
+async function dnsQuery(name, type) {
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${type}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`DNS lookup failed: ${r.status}`);
+    return r.json();
+}
+
+function classifyProviderFromMx(mxHosts) {
+    const j = mxHosts.join(' ').toLowerCase();
+    if (j.includes('aspmx.l.google.com') || j.includes('googlemail.com') || j.includes('google.com')) return 'google';
+    if (j.includes('mail.protection.outlook.com') || j.includes('.olc.protection.outlook.com')) return 'm365';
+    if (j.includes('amazonses.com')) return 'ses';
+    return 'other';
+}
+
+function classifyProviderFromSpf(spfTxt) {
+    const t = spfTxt.toLowerCase();
+    if (t.includes('_spf.google.com')) return 'google';
+    if (t.includes('spf.protection.outlook.com')) return 'm365';
+    if (t.includes('amazonses.com')) return 'ses';
+    return 'other';
+}
+
+async function detectProvider() {
+    const btn = document.getElementById('checkBtn');
+    const resDiv = document.getElementById('result');
+    let domain = document.getElementById('domain').value.trim().toLowerCase();
+    if (!domain) { resDiv.innerHTML = '<div class="result error">יש להזין דומיין.</div>'; return; }
+    domain = domain
+        .replace(/^https?:\/\//,'')
+        .replace(/\/.*$/,'')
+        .replace(/^@/,'')
+        .replace(/^www\./,'');   // strip www. — MX lives on the apex
+    document.getElementById('domain').value = domain;
+
+    btn.disabled = true;
+    resDiv.innerHTML = '<div class="result">בודק DNS <span class="spinner"></span></div>';
+
+    async function lookup(name) {
+        const [mxRes, txtRes] = await Promise.all([
+            dnsQuery(name, 'MX'),
+            dnsQuery(name, 'TXT')
+        ]);
+        const mxHosts = (mxRes.Answer || [])
+            .map(a => a.data.replace(/^\d+\s+/, '').replace(/\.$/, ''))
+            .filter(Boolean);
+        const txtRecords = (txtRes.Answer || [])
+            .map(a => a.data.replace(/^"|"$/g, '').replace(/"\s*"/g, ''));
+        return { mxHosts, txtRecords };
+    }
+
+    try {
+        let { mxHosts, txtRecords } = await lookup(domain);
+
+        // fallback: if no MX on the queried label, try the registrable parent (foo.bar.example.com → bar.example.com → example.com)
+        let queried = domain;
+        while (!mxHosts.length && queried.split('.').length > 2) {
+            queried = queried.split('.').slice(1).join('.');
+            const parent = await lookup(queried);
+            if (parent.mxHosts.length) {
+                mxHosts = parent.mxHosts;
+                txtRecords = parent.txtRecords;
+                domain = queried;
+                document.getElementById('domain').value = domain;
+                break;
+            }
+        }
+
+        const spfRecord = txtRecords.find(t => /^v=spf1/i.test(t)) || '';
+
+        let provider = classifyProviderFromMx(mxHosts);
+        if (provider === 'other' && spfRecord) provider = classifyProviderFromSpf(spfRecord);
+
+        const providerLabel = {
+            google: 'Google Workspace / Gmail',
+            m365:   'Microsoft 365 / Exchange Online',
+            ses:    'Amazon SES',
+            other:  'ספק אחר / לא מזוהה'
+        }[provider];
+
+        let html = `<div class="result ${provider}">`;
+        html += `<div><strong>ספק המייל:</strong> ${providerLabel} <span class="badge ${provider}">${provider.toUpperCase()}</span></div>`;
+        if (mxHosts.length) {
+            html += `<div class="mx-list"><strong>MX records:</strong><br>${mxHosts.join('<br>')}</div>`;
+        } else {
+            html += `<div class="mx-list"><em>לא נמצאו רשומות MX לדומיין.</em></div>`;
+        }
+        if (spfRecord) {
+            html += `<div class="mx-list"><strong>SPF:</strong> ${spfRecord}</div>`;
+        } else {
+            html += `<div class="mx-list"><em>אין רשומת SPF — חובה להוסיף.</em></div>`;
+        }
+        html += `</div>`;
+        resDiv.innerHTML = html;
+
+        // pre-fill sending domain fields on the tabs
+        document.getElementById('m365domain').value = domain;
+        document.getElementById('sesdomain').value  = domain;
+        renderAll();
+
+        // switch to the detected provider tab (unless other)
+        if (['google','m365','ses'].includes(provider)) switchTab(provider);
+    } catch (err) {
+        resDiv.innerHTML = `<div class="result error">שגיאה בבדיקה: ${err.message}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ---------------- Tabs ----------------
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+}
+
+// ---------------- Render per-tab dynamic content ----------------
+function currentDomain() {
+    return (document.getElementById('domain').value.trim().toLowerCase() || 'DOMAIN');
+}
+
+function renderGoogle() {
+    const d = currentDomain();
+    document.getElementById('google-dmarc').textContent =
+        `v=DMARC1; p=quarantine; rua=mailto:dmarc@${d}; adkim=s; aspf=s`;
+}
+
+function renderM365() {
+    const d = document.getElementById('m365domain').value.trim().toLowerCase() || currentDomain();
+    const tenant = document.getElementById('tenant').value.trim().toLowerCase() || 'TENANT';
+    const dkey = d.replace(/\./g, '-');
+
+    document.getElementById('m365-dkim1').textContent =
+        `selector1-${dkey}._domainkey.${tenant}.onmicrosoft.com`;
+    document.getElementById('m365-dkim2').textContent =
+        `selector2-${dkey}._domainkey.${tenant}.onmicrosoft.com`;
+    document.getElementById('m365-dmarc').textContent =
+        `v=DMARC1; p=quarantine; rua=mailto:dmarc@${d}; adkim=s; aspf=s`;
+    document.getElementById('m365-smtp-user').textContent = `user@${d}`;
+}
+
+function renderSES() {
+    const d = document.getElementById('sesdomain').value.trim().toLowerCase() || currentDomain();
+    const raw = document.getElementById('sesTokens').value.trim();
+    const tokens = raw.split(/[\s,]+/).filter(Boolean);
+
+    // Rebuild the DKIM grid
+    const grid = document.getElementById('ses-dkim-grid');
+    // Wipe all children except the first 3 header cells
+    while (grid.children.length > 3) grid.removeChild(grid.lastChild);
+
+    const displayTokens = tokens.length ? tokens.slice(0, 3) : ['TOKEN1', 'TOKEN2', 'TOKEN3'];
+    while (displayTokens.length < 3) displayTokens.push(`TOKEN${displayTokens.length + 1}`);
+
+    displayTokens.forEach((tok, i) => {
+        const host = `${tok}._domainkey.${d}`;
+        const target = `${tok}.dkim.amazonses.com`;
+
+        const hostDiv = document.createElement('div');
+        hostDiv.textContent = host;
+        hostDiv.id = `ses-dkim-host-${i}`;
+
+        const targetDiv = document.createElement('div');
+        targetDiv.textContent = target;
+        targetDiv.id = `ses-dkim-target-${i}`;
+
+        const actDiv = document.createElement('div');
+        const btn = document.createElement('button');
+        btn.className = 'copy';
+        btn.textContent = 'העתק';
+        btn.onclick = () => copyText(target, btn);
+        actDiv.appendChild(btn);
+
+        grid.appendChild(hostDiv);
+        grid.appendChild(targetDiv);
+        grid.appendChild(actDiv);
+    });
+
+    document.getElementById('ses-mailfrom-mx-host').textContent = `mail.${d}`;
+    document.getElementById('ses-mailfrom-mx-val').textContent  = `10 feedback-smtp.us-east-1.amazonses.com`;
+    document.getElementById('ses-mailfrom-spf-host').textContent = `mail.${d} (TXT)`;
+    document.getElementById('ses-dmarc').textContent =
+        `v=DMARC1; p=quarantine; rua=mailto:dmarc@${d}; adkim=r; aspf=r`;
+}
+
+function renderAll() {
+    renderGoogle();
+    renderM365();
+    renderSES();
+    renderEmail();
+}
+
+// ---------------- Email template generation ----------------
+function activeTab() {
+    const t = document.querySelector('.tab.active');
+    return t ? t.dataset.tab : 'google';
+}
+
+function buildEmailForGoogle(domain) {
+    const dmarc = `v=DMARC1; p=quarantine; rua=mailto:dmarc@${domain}; adkim=s; aspf=s`;
+    const body =
+`שלום,
+
+לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהדומיין ${domain}, נדרש להוסיף לרשומות ה-DNS של הדומיין את הרשומות הבאות. הן נועדו להבטיח שהודעות המערכת יאומתו על ידי שרתי המייל של הנמענים ולא יגיעו לתיקיית ה-SPAM.
+
+הספק שזוהה: Google Workspace / Gmail
+
+============================================================
+1) רשומת SPF
+============================================================
+Type   : TXT
+Host   : @  (או השאר ריק — הדומיין הראשי)
+TTL    : 3600
+Value  : v=spf1 include:_spf.google.com ~all
+
+חשוב: לדומיין יכולה להיות רק רשומת SPF אחת. אם כבר קיימת רשומה,
+יש לשלב בה את "include:_spf.google.com" במקום ליצור חדשה.
+
+============================================================
+2) רשומת DKIM
+============================================================
+את המפתח יש לייצר בקונסולת Google Admin (הוא ייחודי לכל דומיין):
+  Admin Console (admin.google.com)
+  → Apps → Google Workspace → Gmail → Authenticate email
+  → בחר את הדומיין → Generate new record → 2048-bit → העתק את ה-TXT.
+
+לאחר שיש בידך את הערך, יש להוסיף רשומה:
+Type   : TXT
+Host   : google._domainkey
+TTL    : 3600
+Value  : v=DKIM1; k=rsa; p=<המפתח מה-Google Admin>
+
+לסיום, לחזור ל-Admin Console וללחוץ "Start authentication".
+
+============================================================
+3) רשומת DMARC (מומלץ מאוד)
+============================================================
+Type   : TXT
+Host   : _dmarc
+TTL    : 3600
+Value  : ${dmarc}
+
+============================================================
+
+לאחר הוספת הרשומות, נא לעדכן אותנו כדי שנוודא את התקינות
+(שינוי DNS יכול לקחת עד 24 שעות עד שיפעל, בפועל בדרך כלל דקות).
+
+תודה!`;
+    return { body };
+}
+
+function buildEmailForM365(domain) {
+    const tenant = document.getElementById('tenant').value.trim().toLowerCase() || 'TENANT';
+    const dkey = domain.replace(/\./g, '-');
+    const dkim1 = `selector1-${dkey}._domainkey.${tenant}.onmicrosoft.com`;
+    const dkim2 = `selector2-${dkey}._domainkey.${tenant}.onmicrosoft.com`;
+    const dmarc = `v=DMARC1; p=quarantine; rua=mailto:dmarc@${domain}; adkim=s; aspf=s`;
+    const body =
+`שלום,
+
+לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהדומיין ${domain}, נדרש להוסיף לרשומות ה-DNS של הדומיין את הרשומות הבאות. הן נועדו להבטיח שהודעות המערכת יאומתו על ידי שרתי המייל של הנמענים ולא יגיעו לתיקיית ה-SPAM.
+
+הספק שזוהה: Microsoft 365 / Exchange Online
+Tenant ששימש בייצור רשומות ה-DKIM: ${tenant}${tenant === 'TENANT' ? '  (יש למלא בהתאם — השם מ-<tenant>.onmicrosoft.com)' : ''}
+
+============================================================
+1) רשומת SPF
+============================================================
+Type   : TXT
+Host   : @  (או השאר ריק — הדומיין הראשי)
+TTL    : 3600
+Value  : v=spf1 include:spf.protection.outlook.com -all
+
+חשוב: לדומיין יכולה להיות רק רשומת SPF אחת. אם קיימת כבר רשומה,
+יש לשלב בה את "include:spf.protection.outlook.com" במקום ליצור חדשה.
+
+============================================================
+2) רשומות DKIM (שני CNAMEs)
+============================================================
+Type   : CNAME
+TTL    : 3600
+
+  Host  : selector1._domainkey
+  Value : ${dkim1}
+
+  Host  : selector2._domainkey
+  Value : ${dkim2}
+
+לאחר הוספת ה-CNAMEs, יש להיכנס ל-Microsoft Defender:
+  Email & collaboration → Policies & rules → Threat policies → DKIM
+  → בחירת הדומיין → Enable.
+לוקח עד שעה עד שההפעלה מסתיימת.
+
+============================================================
+3) Autodiscover (רק אם עדיין לא קיים)
+============================================================
+Type   : CNAME
+Host   : autodiscover
+TTL    : 3600
+Value  : autodiscover.outlook.com
+
+============================================================
+4) רשומת DMARC (מומלץ מאוד)
+============================================================
+Type   : TXT
+Host   : _dmarc
+TTL    : 3600
+Value  : ${dmarc}
+
+============================================================
+
+לאחר הוספת הרשומות, נא לעדכן אותנו כדי שנוודא את התקינות
+(שינוי DNS יכול לקחת עד 24 שעות עד שיפעל, בפועל בדרך כלל דקות).
+
+תודה!`;
+    return { body };
+}
+
+function buildEmailForSESUser() {
+    const userEmail = (document.getElementById('sesUserEmail').value.trim() || 'USER@CUSTOMER.COM');
+    const body =
+`שלום,
+
+לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהכתובת ${userEmail}, נדרש אימות חד-פעמי של הכתובת אצל Amazon SES.
+
+התהליך:
+
+1) בקרוב תגיע לכתובת ${userEmail} הודעת אימות אוטומטית מ-Amazon Web Services,
+   עם הנושא: "Amazon Web Services - Email Address Verification Request"
+
+2) יש לפתוח את ההודעה וללחוץ על הלינק "Verify this email address"
+   תוך 24 שעות מרגע קבלתה. לאחר האישור המשתמש מוגדר במערכת שלנו.
+
+3) לאחר האימות, נספק לכם קובץ CSV הכולל SMTP Username ו-SMTP Password.
+   פרטים אלה הם הזדהות ה-SMTP שיוזנו בהגדרות מערכת השליחה.
+
+============================================================
+הגדרות SMTP (יש להזין במערכת שממנה נשלחים המיילים)
+============================================================
+  SMTP Server : email-smtp.us-east-1.amazonaws.com
+  Port        : 587
+  Encryption  : STARTTLS
+  Auth        : Required
+  Username    : לפי קובץ ה-CSV
+  Password    : לפי קובץ ה-CSV
+
+============================================================
+חשוב לדעת
+============================================================
+- ההודעה שתגיע לכתובת ${userEmail} מקורית של AWS - אין למחוק / להתעלם.
+- אם היא לא הגיעה בתוך 5 דקות, בדקו את תיקיית ה-SPAM.
+- קובץ ה-CSV יסופק פעם אחת ואינו ניתן לשחזור - יש לשמור אותו במקום מאובטח.
+- שליחה מכתובת אחרת מ-${userEmail} תיחסם על ידי SES.
+
+תודה!`;
+    return { body };
+}
+
+function buildEmailForSES(domain) {
+    const raw = document.getElementById('sesTokens').value.trim();
+    const tokens = raw.split(/[\s,]+/).filter(Boolean).slice(0, 3);
+    const dkimSection = tokens.length === 3
+        ? tokens.map((tok, i) =>
+`  Host  : ${tok}._domainkey
+  Value : ${tok}.dkim.amazonses.com`).join('\n\n')
+        : '  (יש להעתיק את 3 ה-DKIM Tokens מ-SES Console → Verified identities → הדומיין → DKIM.\n   כל טוקן יוצר CNAME בפורמט <token>._domainkey → <token>.dkim.amazonses.com)';
+    const dmarc = `v=DMARC1; p=quarantine; rua=mailto:dmarc@${domain}; adkim=r; aspf=r`;
+    const body =
+`שלום,
+
+לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהדומיין ${domain}, נדרש להוסיף לרשומות ה-DNS של הדומיין את הרשומות הבאות. הן נועדו להבטיח שהודעות המערכת יאומתו על ידי שרתי המייל של הנמענים ולא יגיעו לתיקיית ה-SPAM.
+
+הספק שנבחר: Amazon SES
+
+============================================================
+1) רשומת SPF
+============================================================
+Type   : TXT
+Host   : @  (או השאר ריק — הדומיין הראשי)
+TTL    : 3600
+Value  : v=spf1 include:amazonses.com ~all
+
+חשוב: לדומיין יכולה להיות רק רשומת SPF אחת. אם כבר קיימת רשומה,
+יש לשלב בה את "include:amazonses.com" במקום ליצור חדשה.
+
+============================================================
+2) רשומות DKIM (שלושה CNAMEs)
+============================================================
+Type   : CNAME
+TTL    : 1800
+
+${dkimSection}
+
+============================================================
+3) Custom MAIL FROM  (מומלץ, משפר SPF alignment ו-deliverability)
+============================================================
+  Host  : mail.${domain}
+  Type  : MX
+  TTL   : 3600
+  Value : 10 feedback-smtp.us-east-1.amazonses.com
+
+  Host  : mail.${domain}
+  Type  : TXT
+  TTL   : 3600
+  Value : v=spf1 include:amazonses.com ~all
+
+============================================================
+4) רשומת DMARC (מומלץ מאוד)
+============================================================
+Type   : TXT
+Host   : _dmarc
+TTL    : 3600
+Value  : ${dmarc}
+
+============================================================
+
+לאחר הוספת הרשומות, נא לעדכן אותנו כדי שנוודא את התקינות
+(שינוי DNS יכול לקחת עד 24 שעות עד שיפעל, בפועל בדרך כלל דקות).
+
+תודה!`;
+    return { body };
+}
+
+function renderEmail() {
+    const domain = currentDomain();
+    const g = document.getElementById('emailBody-google');
+    const m = document.getElementById('emailBody-m365');
+    const s = document.getElementById('emailBody-ses');
+    const su = document.getElementById('emailBody-ses-user');
+    if (g)  g.value  = buildEmailForGoogle(domain).body;
+    if (m)  m.value  = buildEmailForM365(domain).body;
+    if (s)  s.value  = buildEmailForSES(domain).body;
+    if (su) su.value = buildEmailForSESUser().body;
+}
+
+function switchSESMode(mode) {
+    document.querySelectorAll('.ses-mode-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.mode === mode));
+    document.getElementById('ses-mode-user').style.display   = mode === 'user'   ? 'block' : 'none';
+    document.getElementById('ses-mode-domain').style.display = mode === 'domain' ? 'block' : 'none';
+}
+
+
+// ---------------- Copy helpers ----------------
+async function copyText(text, btn) {
+    try {
+        await navigator.clipboard.writeText(text);
+        const orig = btn.textContent;
+        btn.textContent = 'הועתק ✓';
+        btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1500);
+    } catch (err) {
+        alert('העתקה נכשלה: ' + err.message);
+    }
+}
+
+function copyRecord(id, btn) {
+    copyText(document.getElementById(id).textContent, btn);
+}
+
+// Enter key on domain box triggers detection
+document.getElementById('domain').addEventListener('keydown', e => {
+    if (e.key === 'Enter') detectProvider();
+});
+
+// Domain / tenant / tokens changes should also refresh the email
+document.getElementById('domain').addEventListener('input', () => renderEmail());
+document.getElementById('tenant').addEventListener('input', () => renderEmail());
+document.getElementById('m365domain').addEventListener('input', () => renderEmail());
+document.getElementById('sesdomain').addEventListener('input', () => renderEmail());
+document.getElementById('sesTokens').addEventListener('input', () => renderEmail());
+document.getElementById('sesUserEmail').addEventListener('input', () => renderEmail());
+
+// Collapsible cards: any .inner-card with an <h3> collapses/expands on h3 click.
+// Default state: collapsed.
+document.querySelectorAll('.inner-card').forEach(card => {
+    const h3 = card.querySelector(':scope > h3');
+    if (!h3) return; // config cards without a title stay open
+    card.classList.add('collapsed');
+    h3.addEventListener('click', () => card.classList.toggle('collapsed'));
+});
+
+// Initial render
+renderAll();
+</script>
+
+</body>
+</html>
