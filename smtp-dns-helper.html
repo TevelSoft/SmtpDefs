@@ -346,9 +346,38 @@
         vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Guided tour button */
+    .tour-btn {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        background: #2E74B5;
+        color: #fff;
+        border: 0;
+        padding: 9px 18px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        z-index: 100000;
+        font-family: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .tour-btn:hover { background: #1F5A94; }
+    /* Driver.js popover in RTL — keep the popover text right-aligned in Hebrew */
+    .driver-popover-title,
+    .driver-popover-description { direction: rtl; text-align: right; }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
+<script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
 </head>
 <body>
+
+<button class="tour-btn" onclick="startTour()" title="הפעלת סיור מודרך">סיור מודרך</button>
 
 <h1>כלי הגדרת SMTP ורשומות DNS</h1>
 <div class="sub">
@@ -374,7 +403,7 @@
     <div class="tabs">
         <div class="tab active" data-tab="google" onclick="switchTab('google')">Google / Workspace</div>
         <div class="tab" data-tab="m365"       onclick="switchTab('m365')">Microsoft 365</div>
-        <div class="tab" data-tab="ses"        onclick="switchTab('ses')">Amazon SES</div>
+        <div class="tab" data-tab="ses"        onclick="switchTab('ses')">תבל</div>
     </div>
 
     <!-- ---------- Google ---------- -->
@@ -560,8 +589,19 @@
         </div>
     </div>
 
-    <!-- ---------- SES ---------- -->
+    <!-- ---------- SES (Tevel) ---------- -->
     <div class="tab-content" id="tab-ses">
+        <div class="inner-card config" style="border-color:#FF9900; background:#fff8ec;">
+            <h3 style="color:#B25E00;">שלב 1 — פנייה לצוות הפיתוח</h3>
+            <div>
+                לפני שממשיכים בהגדרות תבל, יש לפנות ל<strong>צוות הפיתוח</strong> כדי שייצור את ההזדהות המתאימה:
+                <ul style="margin:8px 0 0 0; padding-inline-start: 22px;">
+                    <li>למצב <strong>יוזר בודד</strong> — יצירת משתמש (User) עבור כתובת מייל בודדת.</li>
+                    <li>למצב <strong>דומיין מאושר</strong> — יצירת Tenant עבור הדומיין כולו.</li>
+                </ul>
+                המשך התהליך למטה תלוי במצב שנבחר.
+            </div>
+        </div>
         <div class="ses-mode-tabs">
             <div class="ses-mode-tab active" data-mode="user" onclick="switchSESMode('user')">יוזר בודד</div>
             <div class="ses-mode-tab" data-mode="domain" onclick="switchSESMode('domain')">דומיין מאושר</div>
@@ -571,7 +611,7 @@
         <div id="ses-mode-user">
             <div class="inner-card config">
                 <div class="note">
-                    במצב "יוזר בודד" מאמתים אצל Amazon SES כתובת מייל בודדת. אין צורך בגישה ל-DNS —
+                    במצב "יוזר בודד" מאמתים בתבל כתובת מייל בודדת. אין צורך בגישה ל-DNS —
                     המשתמש עצמו יאשר את הכתובת דרך לינק שיישלח אליו.
                 </div>
                 <div class="row">
@@ -647,7 +687,7 @@
         <div id="ses-mode-domain" style="display:none">
             <div class="inner-card config">
                 <div class="note">
-                    במצב "דומיין מאושר" מאמתים דומיין שלם ב-SES ומגדירים DKIM ברמת DNS. כל כתובת מייל בדומיין יכולה לשלוח.
+                    במצב "דומיין מאושר" מאמתים דומיין שלם בתבל ומגדירים DKIM ברמת DNS. כל כתובת מייל בדומיין יכולה לשלוח.
                 </div>
                 <div class="row">
                     <div>
@@ -837,8 +877,8 @@ async function detectProvider() {
         const providerLabel = {
             google: 'Google Workspace / Gmail',
             m365:   'Microsoft 365 / Exchange Online',
-            ses:    'Amazon SES',
-            other:  'ספק אחר / לא מזוהה'
+            ses:    'תבל',
+            other:  'ספק אחר / לא מזוהה — מומלץ להשתמש בתבל'
         }[provider];
 
         let html = `<div class="result ${provider}">`;
@@ -861,8 +901,9 @@ async function detectProvider() {
         document.getElementById('sesdomain').value  = domain;
         renderAll();
 
-        // switch to the detected provider tab (unless other)
-        if (['google','m365','ses'].includes(provider)) switchTab(provider);
+        // switch to the detected provider tab — fall back to Tevel (SES) when the customer
+        // doesn't use Google or M365 (i.e. can't send from either), since Tevel is our default option.
+        switchTab(provider === 'other' ? 'ses' : provider);
     } catch (err) {
         resDiv.innerHTML = `<div class="result error">שגיאה בבדיקה: ${err.message}</div>`;
     } finally {
@@ -1083,7 +1124,7 @@ function buildEmailForSESUser() {
     const body =
 `שלום,
 
-לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהכתובת ${userEmail}, נדרש אימות חד-פעמי של הכתובת אצל Amazon SES.
+לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהכתובת ${userEmail}, נדרש אימות חד-פעמי של הכתובת אצל תבל.
 
 התהליך:
 
@@ -1112,7 +1153,7 @@ function buildEmailForSESUser() {
 - ההודעה שתגיע לכתובת ${userEmail} מקורית של AWS - אין למחוק / להתעלם.
 - אם היא לא הגיעה בתוך 5 דקות, בדקו את תיקיית ה-SPAM.
 - קובץ ה-CSV יסופק פעם אחת ואינו ניתן לשחזור - יש לשמור אותו במקום מאובטח.
-- שליחה מכתובת אחרת מ-${userEmail} תיחסם על ידי SES.
+- שליחה מכתובת אחרת מ-${userEmail} תיחסם על ידי תבל.
 
 תודה!`;
     return { body };
@@ -1132,7 +1173,7 @@ function buildEmailForSES(domain) {
 
 לצורך הפעלת שליחת אימיילים מהמערכת שלנו מהדומיין ${domain}, נדרש להוסיף לרשומות ה-DNS של הדומיין את הרשומות הבאות. הן נועדו להבטיח שהודעות המערכת יאומתו על ידי שרתי המייל של הנמענים ולא יגיעו לתיקיית ה-SPAM.
 
-הספק שנבחר: Amazon SES
+הספק שנבחר: תבל
 
 ============================================================
 1) רשומת SPF
@@ -1241,6 +1282,121 @@ document.querySelectorAll('.inner-card').forEach(card => {
     card.classList.add('collapsed');
     h3.addEventListener('click', () => card.classList.toggle('collapsed'));
 });
+
+// ---------------- Guided tour (driver.js) ----------------
+const tour = window.driver.js.driver({
+    showProgress: true,
+    allowClose: true,
+    smoothScroll: true,
+    animate: true,
+    stagePadding: 6,
+    stageRadius: 8,
+    nextBtnText: 'הבא',
+    prevBtnText: 'הקודם',
+    doneBtnText: 'סיום',
+    progressText: 'שלב {{current}} מתוך {{total}}',
+    onHighlightStarted: (el) => {
+        // Auto-expand collapsed inner-cards when highlighted so the user sees their content
+        if (el && el.classList && el.classList.contains('inner-card')) {
+            el.classList.remove('collapsed');
+        }
+    },
+    steps: [
+        {
+            popover: {
+                title: 'ברוכים הבאים לכלי SMTP / DNS',
+                description: 'הכלי עוזר לזהות את ספק המייל של הלקוח ולהכין את רשומות ה-DNS ואת הגדרות ה-SMTP המתאימות. הסיור הקצר יסביר איך משתמשים בו.'
+            }
+        },
+        {
+            element: '#domain',
+            popover: {
+                title: '1. הזנת דומיין',
+                description: 'הזן כאן את הדומיין של הלקוח (למשל <code>example.com</code>). ניתן להזין גם URL מלא — הכלי ינקה את הקידומות אוטומטית.',
+                side: 'bottom', align: 'start'
+            }
+        },
+        {
+            element: '#checkBtn',
+            popover: {
+                title: '2. בדיקת ספק אוטומטית',
+                description: 'לחיצה על הכפתור מפעילה בדיקת DNS (MX + TXT) ומזהה אוטומטית אם המייל של הלקוח מארח ב-<strong>Google</strong> או ב-<strong>Microsoft 365</strong>. אם הלקוח לא יכול לשלוח מאחד מהם — הכלי עובר אוטומטית לטאב <strong>תבל</strong>.',
+                side: 'bottom'
+            }
+        },
+        {
+            element: '#result',
+            popover: {
+                title: '3. תוצאות הזיהוי',
+                description: 'התוצאה תופיע כאן — הספק שזוהה, רשומות ה-MX, ורשומת ה-SPF הקיימת (אם יש). הכלי גם יעבור אוטומטית לטאב של הספק שזוהה.',
+                side: 'bottom'
+            }
+        },
+        {
+            element: '.tabs',
+            popover: {
+                title: '4. שלושה טאבים לפי ספק',
+                description: 'לכל ספק יש טאב עם ההגדרות המתאימות: <strong>Google Workspace</strong>, <strong>Microsoft 365</strong> ו-<strong>תבל</strong>. אפשר לעבור ביניהם גם ידנית.',
+                side: 'bottom'
+            }
+        },
+        {
+            element: '#tab-google > .inner-card:nth-child(1)',
+            popover: {
+                title: '5. הגדרות SMTP',
+                description: 'הכרטיסים מתקפלים — לחיצה על הכותרת פותחת או סוגרת. כאן מופיעים פרטי החיבור: שרת, פורט, אימות והצפנה. ליד כל ערך יש כפתור <strong>העתק</strong>.',
+                side: 'top'
+            }
+        },
+        {
+            element: '#tab-google > .inner-card:nth-child(2)',
+            popover: {
+                title: '6. רשומות DNS להוספה',
+                description: 'רשומות <strong>SPF</strong>, <strong>DKIM</strong> ו-<strong>DMARC</strong> להוספה בממשק ה-DNS של הדומיין. חלק מהערכים נבנים דינמית לפי הדומיין שהוזן.',
+                side: 'top'
+            }
+        },
+        {
+            element: '#tab-google > .inner-card.email',
+            popover: {
+                title: '7. מייל מוכן ללקוח',
+                description: 'תבנית מייל בעברית עם כל רשומות ה-DNS משולבות בפנים. אפשר לערוך, ואז ללחוץ <strong>העתק את המייל</strong> ולשלוח למנהל ה-IT של הלקוח.',
+                side: 'top'
+            }
+        },
+        {
+            popover: {
+                title: 'הבדלים בין הספקים',
+                description: '<strong>Microsoft 365:</strong> חובה להזין את שם ה-Tenant (מ-<code>tenant.onmicrosoft.com</code>) כדי לבנות את רשומות ה-DKIM.<br><br><strong>תבל:</strong> נבחר אוטומטית כשהלקוח לא יכול לשלוח מ-Google או מ-Microsoft 365. קיימים שני מצבים — <em>יוזר בודד</em> (אימות כתובת מייל אחת בלבד, ללא גישה ל-DNS) או <em>דומיין מאושר</em> (אימות מלא של הדומיין עם 3 DKIM Tokens).'
+            }
+        },
+        {
+            popover: {
+                title: 'תבל — שלב ראשון: פנייה לצוות הפיתוח',
+                description: 'לפני שמעבירים ללקוח הגדרות תבל, יש לפנות ל<strong>צוות הפיתוח</strong> ולבקש ליצור בתבל:<br>• <strong>User</strong> — עבור מצב "יוזר בודד" (כתובת מייל בודדת).<br>• <strong>Tenant</strong> — עבור מצב "דומיין מאושר" (דומיין שלם).<br><br>ההנחיה הזו מודגשת גם בראש טאב <strong>תבל</strong>.'
+            }
+        },
+        {
+            popover: {
+                title: 'זהו!',
+                description: 'אפשר להתחיל בהזנת דומיין למעלה. כדי לחזור על הסיור בכל שלב — לחץ שוב על <strong>? סיור מודרך</strong> בפינה השמאלית העליונה.'
+            }
+        }
+    ]
+});
+
+function startTour() {
+    switchTab('google'); // Ensure the tour starts on a known-good tab
+    tour.drive();
+}
+
+// Auto-launch the tour on the user's first visit only
+if (!localStorage.getItem('smtpHelperTourSeen')) {
+    setTimeout(() => {
+        startTour();
+        localStorage.setItem('smtpHelperTourSeen', '1');
+    }, 400);
+}
 
 // Initial render
 renderAll();
